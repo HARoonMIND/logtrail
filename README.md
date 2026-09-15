@@ -50,19 +50,28 @@ bundled sample tree and shows a banner on every page.
 
 ### Expected folder structure
 
+Every top-level folder becomes its own **section**, its subfolders become **categories**, and the
+daily folders inside them become **date groups**:
+
 ```
 C:\MyHolidays\XMLLogs\
-└── <Application>\            e.g. BookingService
-    └── <YYYY>\               2026
-        └── <MM>\             09
-            └── <DD>\         15
-                ├── BookingService_20260915_080000.xml
-                ├── BookingService_20260915_130000.xml
-                └── BookingService_20260915_190000.xml
+├── ErrorLog\
+│   └── 2026-09-15\           daily folder
+│       └── ErrorLog_20260915_080000.xml
+├── Hotel\
+│   ├── HotelBook\2026-09-15\HotelBook_20260915_080000.xml
+│   ├── HotelSearch\2026-09-15\…
+│   └── PortalSearch\2026-09-15\…
+└── SupplierLog\
+    ├── Expedia\2026-09-15\…
+    ├── Hotelbeds\2026-09-15\…
+    └── Booking\2026-09-15\…
 ```
 
-The date/time in the file name (`<App>_<YYYYMMDD_HHmmss>`) is parsed and shown in the file
-browser, and is used as the entry timestamp when an entry itself carries none.
+Date folders are recognised as `2026-09-15`, `20260915`, `15-09-2026`, `15-Sep-2026` and nested
+`2026\09\15` chains; anything unrecognised is grouped under “Undated”. The date/time in the file
+name (`<Name>_<YYYYMMDD_HHmmss>`) is parsed and shown in the file browser, and is used as the
+entry timestamp when an entry itself carries none.
 
 ### Supported log formats
 
@@ -93,9 +102,14 @@ exception/stacktrace/error.
   volume timeline (24h / 7d / 30d), severity mix donut, busiest loggers, grouped top errors,
   newest files and latest errors.
 - **Log explorer** — full-text search across message/logger/stack/machine, level toggles, from/to
-  range, per-file filter, sorting, pagination, expandable rows with stack traces, CSV/JSON export.
-- **Files & folders** — folder tree with per-folder file counts and sizes, flat file table with
-  parsed log datetime, modified time and size, raw file view.
+  range, section/category and per-file filters, sorting, pagination, expandable rows with stack traces, CSV/JSON export.
+- **Files & folders** — one card per section (ErrorLog / Hotel / SupplierLog …), categories inside
+  it, collapsible daily date groups, detected format icon, parsed log datetime, modified time and
+  size.
+- **File preview** (`/files/view?path=…`) — format detection (XML / JSON / text), XML well-formed
+  validation with pretty-printing, URLs extracted into their own tab with query parameters broken
+  out, JSON payloads embedded in XML/text (including XML-escaped ones) pretty-printed separately,
+  parsed entries with stack traces, and the raw file.
 - **Live tail** — polling stream with pause/resume, text filter and adjustable interval.
 - **Settings** — log root path, file extensions, scan depth, max files per scan, retention,
   live-tail interval, timezone; all persisted in SQLite.

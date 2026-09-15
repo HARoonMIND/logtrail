@@ -137,6 +137,15 @@ export async function listFiles(source: LogSource, settings: Settings): Promise<
   return files;
 }
 
+/** Resolves a relative path (as shown in the UI) to a scanned file inside the log root. */
+export async function findFile(relativePath: string): Promise<LogFile | null> {
+  const settings = getSettings();
+  const source = resolveSource(settings);
+  const files = await listFiles(source, settings);
+  const wanted = relativePath.split(/[\\/]/).join("/");
+  return files.find((file) => file.relativePath.split(/[\\/]/).join("/") === wanted) ?? null;
+}
+
 export async function readEntries(file: LogFile): Promise<LogEntry[]> {
   if (file.sizeBytes > MAX_FILE_BYTES) return [];
 
@@ -169,9 +178,14 @@ export async function loadEntries(
   const source = resolveSource(settings);
   const allFiles = await listFiles(source, settings);
 
+  const normalize = (value: string) => value.split(/[\\/]/).join("/");
+  const wantedFile = query.file ? normalize(query.file) : null;
+  const wantedDir = query.directory ? normalize(query.directory) : null;
+
   const files = allFiles.filter((file) => {
-    if (query.file && file.relativePath !== query.file) return false;
-    if (query.directory && !file.relativePath.startsWith(query.directory)) return false;
+    const relative = normalize(file.relativePath);
+    if (wantedFile && relative !== wantedFile) return false;
+    if (wantedDir && !relative.startsWith(`${wantedDir}/`) && relative !== wantedDir) return false;
     return true;
   });
 

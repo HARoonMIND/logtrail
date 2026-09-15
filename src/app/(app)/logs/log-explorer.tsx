@@ -21,6 +21,9 @@ import type { LogQueryResult } from "@/lib/logs";
 import { cn } from "cn";
 
 const PAGE_SIZES = [25, 50, 100, 250];
+const ALL = "__all__";
+
+type SectionOption = { label: string; path: string; fileCount: number };
 
 export function LogExplorer() {
   const params = useSearchParams();
@@ -34,6 +37,8 @@ export function LogExplorer() {
   const [from, setFrom] = useState(params.get("from") ?? "");
   const [to, setTo] = useState(params.get("to") ?? "");
   const [file, setFile] = useState(params.get("file") ?? "");
+  const [directory, setDirectory] = useState(params.get("directory") ?? "");
+  const [sections, setSections] = useState<SectionOption[]>([]);
   const [sort, setSort] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
@@ -49,11 +54,12 @@ export function LogExplorer() {
     if (from) query.set("from", new Date(from).toISOString());
     if (to) query.set("to", new Date(to).toISOString());
     if (file) query.set("file", file);
+    if (directory) query.set("directory", directory);
     query.set("sort", sort);
     query.set("page", String(page));
     query.set("pageSize", String(pageSize));
     return query.toString();
-  }, [search, levels, from, to, file, sort, page, pageSize]);
+  }, [search, levels, from, to, file, directory, sort, page, pageSize]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -66,6 +72,32 @@ export function LogExplorer() {
     const timer = setTimeout(load, 250);
     return () => clearTimeout(timer);
   }, [load]);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/sections")
+      .then((response) => (response.ok ? response.json() : { sections: [] }))
+      .then((data: { sections: { name: string; path: string; fileCount: number; categories: { name: string; path: string; fileCount: number }[] }[] }) => {
+        if (!active) return;
+        const options: SectionOption[] = [];
+        for (const section of data.sections) {
+          options.push({ label: section.name, path: section.path, fileCount: section.fileCount });
+          for (const category of section.categories) {
+            if (category.path === section.path) continue;
+            options.push({
+              label: `${section.name} / ${category.name}`,
+              path: category.path,
+              fileCount: category.fileCount,
+            });
+          }
+        }
+        setSections(options);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
 
   function toggleLevel(level: LogLevel) {
     setPage(1);
@@ -124,6 +156,29 @@ export function LogExplorer() {
                   setTo(event.target.value);
                 }}
               />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Section</Label>
+              <Select
+                value={directory || ALL}
+                onValueChange={(value) => {
+                  setPage(1);
+                  setDirectory(value === ALL ? "" : value);
+                }}
+              >
+                <SelectTrigger className="w-56">
+                  <SelectValue placeholder="All sections" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>All sections</SelectItem>
+                  {sections.map((section) => (
+                    <SelectItem key={section.path} value={section.path}>
+                      {section.label} ({section.fileCount})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-1.5">
